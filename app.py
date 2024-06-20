@@ -1,6 +1,8 @@
 import os
+import subprocess
 from flask import Flask, request, redirect, send_from_directory
 import socket
+import mimetypes
 import pyqrcode
 from flask_cors import CORS
 
@@ -27,12 +29,12 @@ def index():
             .navbar a { float: left; display: block; color: white; text-align: center; padding: 14px 20px; text-decoration: none; }
             .navbar a:hover { background-color: #ddd; color: black; }
             .container { display: flex; justify-content: center; align-items: center; height: 80vh; }
-            .box { background: white;  overflow: scroll; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); padding: 40px; text-align: center; }
+            .box { background: white; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); padding: 40px; text-align: center; }
             .box h1 { margin-top: 0; }
             .box input[type=file] { margin: 10px 0; }
             @media screen and (max-width: 600px) {
                 .container { padding: 20px; }
-                .box { padding: 20px; overflow:scroll; }
+                .box { padding: 20px; overflow: scroll; }
             }
         </style>
     </head>
@@ -70,15 +72,16 @@ def files():
             .navbar a { float: left; display: block; color: white; text-align: center; padding: 14px 20px; text-decoration: none; }
             .navbar a:hover { background-color: #ddd; color: black; }
             .container { padding: 40px; }
-            .box { background: white;  overflow: scroll; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); padding: 20px;}
+            .box { background: white; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); padding: 20px;}
             .box h1 { margin-top: 0; }
             table { width: 100%; border-collapse: collapse; margin-top: 20px; }
             table, th, td { border: 1px solid #ddd; }
             th, td { padding: 12px; text-align: left; }
             th { background-color: #f2f2f2; }
-            @media screen and (max-width: 600px) {
+            .btn-danger { color: #dc3545; }
+            @media only screen and (max-width: 760px) {
                 .container { padding: 20px; }
-                .box { overflow: scroll; }
+                 .box { overflow: scroll;}
             }
         </style>
     </head>
@@ -99,13 +102,24 @@ def files():
                     </tr>
     '''
     for file in files:
-        content += f'''
-                    <tr>
-                        <td>{file}</td>
-                        <td><a href="/uploads/{file}" download>Download</a></td>
-                        <td><a href="/uploads/{file}" target="_blank">Preview</a></td>
-                    </tr>
-        '''
+        if file.endswith('.sh'):
+            content += f'''
+                        <tr>
+                            <td>{file}</td>
+                            <td><a href="/run-script/{file}" class="btn-danger">Run Script</a></td>
+                            <td><a href="/preview/{file}" target="_blank">Preview</a></td>
+                        </tr>
+        
+            '''
+        else:
+            content += f'''
+                        <tr>
+                            <td>{file}</td>
+                            <td><a href="/uploads/{file}" download>Downlaod</a></td>
+                            <td><a href="/preview/{file}" target="_blank">Preview</a></td>
+                        </tr>
+        
+            '''  
     content += '''
                 </table>
             </div>
@@ -114,6 +128,8 @@ def files():
     </html>
     '''
     return content
+
+
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
@@ -130,6 +146,32 @@ def upload_file():
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
     return send_from_directory(SHARE_PATH, filename)
+
+
+@app.route('/preview/<filename>')
+def preview(filename):
+    filepath = os.path.join(SHARE_PATH, filename)
+    mimetype, _ = mimetypes.guess_type(filename)
+    if mimetype and mimetype.startswith('image'):
+        return f'<img src="/uploads/{filename}" alt="{filename}" style="max-width: 100%;">'
+    elif mimetype == 'application/pdf':
+        return f'<embed src="/uploads/{filename}" type="application/pdf" width="100%" height="100%" style="margin:0; padding:0;" />'
+    elif mimetype and mimetype.startswith('text'):
+        with open(filepath, 'r') as f:
+            text_content = f.read()
+        return f'<pre>{text_content}</pre>'
+    else:
+        return 'Preview not available for this file type.'
+
+
+@app.route('/run-script/<filename>')
+def run_script(filename):
+    if filename.endswith('.sh'):
+        script_path = os.path.join(SHARE_PATH, filename)
+        result = subprocess.run(['bash', script_path], capture_output=True, text=True)
+        return f'<pre>{result.stdout}</pre>' if result.returncode == 0 else f'<pre>{result.stderr}</pre>'
+    else:
+        return 'Invalid script', 400
 
 def get_ip_address():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
