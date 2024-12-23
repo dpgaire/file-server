@@ -8,7 +8,7 @@ from flask_cors import CORS
 
 app = Flask(__name__)
 UPLOAD_FOLDER = 'uploads'
-SHARE_PATH = "/home/moru/Desktop/share"
+SHARE_PATH = "/home/black-mamba/Desktop/share"
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
@@ -189,8 +189,8 @@ if __name__ == '__main__':
     ip_address = get_ip_address()
     port = 5000
     url = f'http://{ip_address}:{port}/'
-    qr = pyqrcode.create(url, error='H', version=4, mode='binary')
-    qr.show()
+    # qr = pyqrcode.create(url, error='H', version=4, mode='binary')
+    # qr.show()
 
     CORS(app, resources={r"/*": {"origins": ["*"]}})
     app.run(debug=True, host='0.0.0.0', port=5000)
