@@ -189,8 +189,17 @@ if __name__ == '__main__':
     ip_address = get_ip_address()
     port = 5000
     url = f'http://{ip_address}:{port}/'
-    # qr = pyqrcode.create(url, error='H', version=4, mode='binary')
-    # qr.show()
-
+    
+    # Generate a dynamically sized QR code
+    qr = pyqrcode.create(url, error='L', mode='binary')  # Adjusts version automatically
+    
+    # Display the QR code in the terminal
+    print("Access the application using the following URL or scan the QR code below:")
+    print(url)
+    print(qr.terminal(quiet_zone=1))  # Display a smaller QR code
+    
     CORS(app, resources={r"/*": {"origins": ["*"]}})
     app.run(debug=True, host='0.0.0.0', port=5000)
+
+
+
